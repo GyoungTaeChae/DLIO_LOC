@@ -10,7 +10,7 @@
  *                                                         *
  ***********************************************************/
 
-#include "dlio/odom.h"
+#include "odom.h"
 
 dlio::OdomNode::OdomNode(ros::NodeHandle node_handle) : nh(node_handle) {
 

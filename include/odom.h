@@ -10,14 +10,14 @@
  *                                                         *
  ***********************************************************/
 
-#include "dlio/dlio.h"
+#include "dlio.h"
 
-class dlio::LocNode {
+class dlio::OdomNode {
 
 public:
 
-  LocNode(ros::NodeHandle node_handle);
-  ~LocNode();
+  OdomNode(ros::NodeHandle node_handle);
+  ~OdomNode();
 
   void start();
 
@@ -30,20 +30,21 @@ private:
 
   void callbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& pc);
   void callbackImu(const sensor_msgs::Imu::ConstPtr& imu);
-  void callbackInitialPose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
 
   void publishPose(const ros::TimerEvent& e);
 
   void publishToROS(pcl::PointCloud<PointType>::ConstPtr published_cloud, Eigen::Matrix4f T_cloud);
   void publishCloud(pcl::PointCloud<PointType>::ConstPtr published_cloud, Eigen::Matrix4f T_cloud);
+  void publishKeyframe(std::pair<std::pair<Eigen::Vector3f, Eigen::Quaternionf>,
+                       pcl::PointCloud<PointType>::ConstPtr> kf, ros::Time timestamp);
 
   void getScanFromROS(const sensor_msgs::PointCloud2ConstPtr& pc);
   void preprocessPoints();
   void deskewPointcloud();
+  void initializeInputTarget();
   void setInputSource();
 
-  void loadGlobalMap();
-  void initializeLoc();
+  void initializeDLIO();
 
   void getNextPose();
   bool imuMeasFromTimeRange(double start_time, double end_time,
@@ -62,7 +63,22 @@ private:
   void propagateState();
   void updateState();
 
+  void setAdaptiveParams();
+  void setKeyframeCloud();
+
+  void computeMetrics();
+  void computeSpaciousness();
+  void computeDensity();
+
   sensor_msgs::Imu::Ptr transformImu(const sensor_msgs::Imu::ConstPtr& imu);
+
+  void updateKeyframes();
+  void computeConvexHull();
+  void computeConcaveHull();
+  void pushSubmapIndices(std::vector<float> dists, int k, std::vector<int> frames);
+  void buildSubmap(State vehicle_state);
+  void buildKeyframesAndSubmap(State vehicle_state);
+  void pauseSubmapBuildIfNeeded();
 
   void debug();
 
@@ -72,43 +88,54 @@ private:
   // Subscribers
   ros::Subscriber lidar_sub;
   ros::Subscriber imu_sub;
-  ros::Subscriber initialpose_sub;
 
   // Publishers
   ros::Publisher odom_pub;
   ros::Publisher pose_pub;
   ros::Publisher path_pub;
+  ros::Publisher kf_pose_pub;
+  ros::Publisher kf_cloud_pub;
   ros::Publisher deskewed_pub;
-  ros::Publisher globalmap_pub;
 
   // ROS Msgs
   nav_msgs::Odometry odom_ros;
   geometry_msgs::PoseStamped pose_ros;
   nav_msgs::Path path_ros;
+  geometry_msgs::PoseArray kf_pose_ros;
 
   // Flags
-  std::atomic<bool> loc_initialized;
+  std::atomic<bool> dlio_initialized;
   std::atomic<bool> first_valid_scan;
   std::atomic<bool> first_imu_received;
   std::atomic<bool> imu_calibrated;
+  std::atomic<bool> submap_hasChanged;
   std::atomic<bool> gicp_hasConverged;
   std::atomic<bool> deskew_status;
   std::atomic<int> deskew_size;
-  std::atomic<bool> globalmap_ready;
 
   // Threads
   std::thread publish_thread;
+  std::thread publish_keyframe_thread;
+  std::thread metrics_thread;
   std::thread debug_thread;
 
   // Trajectory
   std::vector<std::pair<Eigen::Vector3f, Eigen::Quaternionf>> trajectory;
   double length_traversed;
 
+  // Keyframes
+  std::vector<std::pair<std::pair<Eigen::Vector3f, Eigen::Quaternionf>,
+                        pcl::PointCloud<PointType>::ConstPtr>> keyframes;
+  std::vector<ros::Time> keyframe_timestamps;
+  std::vector<std::shared_ptr<const nano_gicp::CovarianceList>> keyframe_normals;
+  std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f>> keyframe_transformations;
+  std::mutex keyframes_mutex;
+
   // Sensor Type
   dlio::SensorType sensor;
 
   // Frames
-  std::string map_frame;
+  std::string odom_frame;
   std::string baselink_frame;
   std::string lidar_frame;
   std::string imu_frame;
@@ -122,8 +149,28 @@ private:
   pcl::PointCloud<PointType>::ConstPtr deskewed_scan;
   pcl::PointCloud<PointType>::ConstPtr current_scan;
 
-  // Global Map
-  pcl::PointCloud<PointType>::Ptr globalmap;
+  // Keyframes
+  pcl::PointCloud<PointType>::ConstPtr keyframe_cloud;
+  int num_processed_keyframes;
+
+  pcl::ConvexHull<PointType> convex_hull;
+  pcl::ConcaveHull<PointType> concave_hull;
+  std::vector<int> keyframe_convex;
+  std::vector<int> keyframe_concave;
+
+  // Submap
+  pcl::PointCloud<PointType>::ConstPtr submap_cloud;
+  std::shared_ptr<const nano_gicp::CovarianceList> submap_normals;
+  std::shared_ptr<const nanoflann::KdTreeFLANN<PointType>> submap_kdtree;
+
+  std::vector<int> submap_kf_idx_curr;
+  std::vector<int> submap_kf_idx_prev;
+
+  bool new_submap_is_ready;
+  std::future<void> submap_future;
+  std::condition_variable submap_build_cv;
+  bool main_loop_running;
+  std::mutex main_loop_running_mutex;
 
   // Timestamps
   ros::Time scan_header_stamp;
@@ -131,7 +178,6 @@ private:
   double prev_scan_stamp;
   double scan_dt;
   std::vector<double> comp_times;
-  std::vector<double> gicp_times;
   std::vector<double> imu_rates;
   std::vector<double> lidar_rates;
 
@@ -140,6 +186,7 @@ private:
 
   // GICP
   nano_gicp::NanoGICP<PointType, PointType> gicp;
+  nano_gicp::NanoGICP<PointType, PointType> gicp_temp;
 
   // Transformations
   Eigen::Matrix4f T, T_prior, T_corr;
@@ -220,6 +267,12 @@ private:
   Pose lidarPose;
   Pose imuPose;
 
+  // Metrics
+  struct Metrics {
+    std::vector<float> spaciousness;
+    std::vector<float> density;
+  }; Metrics metrics;
+
   std::string cpu_type;
   std::vector<double> cpu_percents;
   clock_t lastCPU, lastSysCPU, lastUserCPU;
@@ -235,6 +288,23 @@ private:
   double gravity_;
 
   bool time_offset_;
+
+  bool adaptive_params_;
+
+  double obs_submap_thresh_;
+  double obs_keyframe_thresh_;
+  double obs_keyframe_lag_;
+
+  double keyframe_thresh_dist_;
+  double keyframe_thresh_rot_;
+
+  int submap_knn_;
+  int submap_kcv_;
+  int submap_kcc_;
+  double submap_concave_alpha_;
+
+  bool densemap_filtered_;
+  bool wait_until_move_;
 
   double crop_size_;
 
@@ -264,14 +334,5 @@ private:
   double geo_Kgb_;
   double geo_abias_max_;
   double geo_gbias_max_;
-
-  // Localization-specific parameters
-  std::string globalmap_pcd_path_;
-  double globalmap_leaf_size_;
-
-  bool use_rviz_;
-  bool use_yaml_;
-  double init_x_, init_y_, init_z_;
-  double init_roll_, init_pitch_, init_yaw_;
 
 };

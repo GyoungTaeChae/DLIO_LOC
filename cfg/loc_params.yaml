@@ -37,6 +37,9 @@ dlio:
       voxelFilter:
         res: 0.25
 
+    registration:
+      method: "NDT_OMP"                    # "GICP" or "NDT_OMP"
+
     gicp:
       minNumPoints: 64
       kCorrespondences: 16
@@ -45,6 +48,13 @@ dlio:
       transformationEpsilon: 0.01
       rotationEpsilon: 0.01
       initLambdaFactor: 1e-9
+
+    ndt_omp:
+      resolution: 1.0                   # voxel resolution (smaller = more precise but slower)
+      stepSize: 0.1                     # Newton line search step
+      outlierRatio: 0.35                # outlier ratio
+      numThreads: 4                     # OpenMP threads
+      searchMethod: "DIRECT7"           # "DIRECT1", "DIRECT7", "KDTREE"
 
     geo:
       Kp: 4.5

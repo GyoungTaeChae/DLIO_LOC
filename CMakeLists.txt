@@ -76,6 +76,8 @@ catkin_package(
 )
 
 include_directories(include)
+include_directories(thirdparty/nano_gicp/include)
+include_directories(thirdparty/ndt_omp/include)
 include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
 
 # Not all machines have <cpuid.h> available
@@ -89,31 +91,31 @@ endif()
 
 # NanoFLANN
 add_library(nanoflann STATIC
-  src/nano_gicp/nanoflann.cc
+  thirdparty/nano_gicp/src/nano_gicp/nanoflann.cc
 )
 target_link_libraries(nanoflann ${PCL_LIBRARIES})
 
 # NanoGICP
 add_library(nano_gicp STATIC
-  src/nano_gicp/lsq_registration.cc
-  src/nano_gicp/nano_gicp.cc
+  thirdparty/nano_gicp/src/nano_gicp/lsq_registration.cc
+  thirdparty/nano_gicp/src/nano_gicp/nano_gicp.cc
 )
 target_link_libraries(nano_gicp ${PCL_LIBRARIES} ${OpenMP_LIBS} nanoflann)
 
 # Odometry Node
-add_executable(dlio_odom_node src/dlio/odom_node.cc src/dlio/odom.cc)
+add_executable(dlio_odom_node src/odom_node.cc src/odom.cc)
 add_dependencies(dlio_odom_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 target_compile_options(dlio_odom_node PRIVATE ${OpenMP_FLAGS})
 target_link_libraries(dlio_odom_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads nano_gicp)
 
 # Mapping Node
-add_executable (dlio_map_node src/dlio/map_node.cc src/dlio/map.cc)
+add_executable (dlio_map_node src/map_node.cc src/map.cc)
 add_dependencies(dlio_map_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 target_compile_options(dlio_map_node PRIVATE ${OpenMP_FLAGS})
 target_link_libraries(dlio_map_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads)
 
 # Localization Node
-add_executable(dlio_loc_node src/dlio/loc_node.cc src/dlio/loc.cc)
+add_executable(dlio_loc_node src/loc_node.cc src/loc.cc)
 add_dependencies(dlio_loc_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 target_compile_options(dlio_loc_node PRIVATE ${OpenMP_FLAGS})
 target_link_libraries(dlio_loc_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads nano_gicp)

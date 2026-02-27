@@ -10,7 +10,11 @@
  *                                                         *
  ***********************************************************/
 
-#include "dlio/loc.h"
+#include "loc.h"
+
+// Include ndt_omp template implementations for dlio::Point instantiation
+#include <pclomp/ndt_omp_impl.hpp>
+#include <pclomp/voxel_grid_covariance_omp_impl.hpp>
 
 dlio::LocNode::LocNode(ros::NodeHandle node_handle) : nh(node_handle) {
 
@@ -77,16 +81,39 @@ dlio::LocNode::LocNode(ros::NodeHandle node_handle) : nh(node_handle) {
   this->elapsed_time = 0.;
   this->length_traversed = 0.;
 
-  this->gicp.setCorrespondenceRandomness(this->gicp_k_correspondences_);
-  this->gicp.setMaxCorrespondenceDistance(this->gicp_max_corr_dist_);
-  this->gicp.setMaximumIterations(this->gicp_max_iter_);
-  this->gicp.setTransformationEpsilon(this->gicp_transformation_ep_);
-  this->gicp.setRotationEpsilon(this->gicp_rotation_ep_);
-  this->gicp.setInitialLambdaFactor(this->gicp_init_lambda_factor_);
+  if (this->reg_method_ == "NDT_OMP") {
+    auto ndt = pclomp::NormalDistributionsTransform<PointType, PointType>::Ptr(
+      new pclomp::NormalDistributionsTransform<PointType, PointType>());
+    ndt->setResolution(this->ndt_resolution_);
+    ndt->setStepSize(this->ndt_step_size_);
+    ndt->setOutlierRatio(this->ndt_outlier_ratio_);
+    ndt->setNumThreads(this->ndt_num_threads_);
+    ndt->setMaximumIterations(this->gicp_max_iter_);
+    ndt->setTransformationEpsilon(this->gicp_transformation_ep_);
 
-  pcl::Registration<PointType, PointType>::KdTreeReciprocalPtr temp;
-  this->gicp.setSearchMethodSource(temp, true);
-  this->gicp.setSearchMethodTarget(temp, true);
+    if (this->ndt_search_method_ == "DIRECT1")
+      ndt->setNeighborhoodSearchMethod(pclomp::DIRECT1);
+    else if (this->ndt_search_method_ == "DIRECT7")
+      ndt->setNeighborhoodSearchMethod(pclomp::DIRECT7);
+    else
+      ndt->setNeighborhoodSearchMethod(pclomp::KDTREE);
+
+    this->reg_ = ndt;
+    this->gicp_ = nullptr;
+  } else {
+    this->gicp_ = boost::make_shared<nano_gicp::NanoGICP<PointType, PointType>>();
+    this->gicp_->setCorrespondenceRandomness(this->gicp_k_correspondences_);
+    this->gicp_->setMaxCorrespondenceDistance(this->gicp_max_corr_dist_);
+    this->gicp_->setMaximumIterations(this->gicp_max_iter_);
+    this->gicp_->setTransformationEpsilon(this->gicp_transformation_ep_);
+    this->gicp_->setRotationEpsilon(this->gicp_rotation_ep_);
+    this->gicp_->setInitialLambdaFactor(this->gicp_init_lambda_factor_);
+
+    pcl::Registration<PointType, PointType>::KdTreeReciprocalPtr temp;
+    this->gicp_->setSearchMethodSource(temp, true);
+    this->gicp_->setSearchMethodTarget(temp, true);
+    this->reg_ = this->gicp_;
+  }
 
   this->geo.first_opt_done = false;
   this->geo.prev_vel = Eigen::Vector3f(0., 0., 0.);
@@ -292,6 +319,9 @@ void dlio::LocNode::getParams() {
     this->imu_accel_sm_ = Eigen::Matrix3f::Identity();
   }
 
+  // Registration method
+  ros::param::param<std::string>("~dlio/loc/registration/method", this->reg_method_, "GICP");
+
   // GICP
   ros::param::param<int>("~dlio/loc/gicp/minNumPoints", this->gicp_min_num_points_, 100);
   ros::param::param<int>("~dlio/loc/gicp/kCorrespondences", this->gicp_k_correspondences_, 20);
@@ -301,6 +331,13 @@ void dlio::LocNode::getParams() {
   ros::param::param<double>("~dlio/loc/gicp/transformationEpsilon", this->gicp_transformation_ep_, 0.0005);
   ros::param::param<double>("~dlio/loc/gicp/rotationEpsilon", this->gicp_rotation_ep_, 0.0005);
   ros::param::param<double>("~dlio/loc/gicp/initLambdaFactor", this->gicp_init_lambda_factor_, 1e-9);
+
+  // NDT_OMP
+  ros::param::param<double>("~dlio/loc/ndt_omp/resolution", this->ndt_resolution_, 1.0);
+  ros::param::param<double>("~dlio/loc/ndt_omp/stepSize", this->ndt_step_size_, 0.1);
+  ros::param::param<double>("~dlio/loc/ndt_omp/outlierRatio", this->ndt_outlier_ratio_, 0.35);
+  ros::param::param<int>("~dlio/loc/ndt_omp/numThreads", this->ndt_num_threads_, 4);
+  ros::param::param<std::string>("~dlio/loc/ndt_omp/searchMethod", this->ndt_search_method_, "DIRECT7");
 
   // Geometric Observer
   ros::param::param<double>("~dlio/loc/geo/Kp", this->geo_Kp_, 1.0);
@@ -354,12 +391,14 @@ void dlio::LocNode::loadGlobalMap() {
              this->globalmap->points.size(), this->globalmap_leaf_size_);
   }
 
-  // Set as GICP target
-  this->gicp.setInputTarget(this->globalmap);
-  this->gicp.calculateTargetCovariances();
+  // Set as registration target
+  this->reg_->setInputTarget(this->globalmap);
+  if (this->gicp_) {
+    this->gicp_->calculateTargetCovariances();
+  }
 
   this->globalmap_ready = true;
-  ROS_INFO("Global map GICP target set. Ready for localization.");
+  ROS_INFO("Global map %s target set. Ready for localization.", this->reg_method_.c_str());
 
   // Publish global map for RViz visualization
   sensor_msgs::PointCloud2 globalmap_ros;
@@ -775,8 +814,10 @@ void dlio::LocNode::deskewPointcloud() {
 }
 
 void dlio::LocNode::setInputSource() {
-  this->gicp.setInputSource(this->current_scan);
-  this->gicp.calculateSourceCovariances();
+  this->reg_->setInputSource(this->current_scan);
+  if (this->gicp_) {
+    this->gicp_->calculateSourceCovariances();
+  }
 }
 
 void dlio::LocNode::initializeLoc() {
@@ -852,7 +893,7 @@ void dlio::LocNode::callbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& p
 
   // Update some statistics
   this->comp_times.push_back(ros::Time::now().toSec() - then);
-  this->gicp_hasConverged = this->gicp.hasConverged();
+  this->gicp_hasConverged = this->reg_->hasConverged();
 
   // Debug statements
   if (this->verbose) {
@@ -1016,11 +1057,11 @@ void dlio::LocNode::getNextPose() {
   // Align with global map with global IMU transformation as initial guess
   pcl::PointCloud<PointType>::Ptr aligned (boost::make_shared<pcl::PointCloud<PointType>>());
   double gicp_then = ros::Time::now().toSec();
-  this->gicp.align(*aligned);
+  this->reg_->align(*aligned);
   this->gicp_times.push_back(ros::Time::now().toSec() - gicp_then);
 
   // Get final transformation in global frame
-  this->T_corr = this->gicp.getFinalTransformation(); // "correction" transformation
+  this->T_corr = this->reg_->getFinalTransformation(); // "correction" transformation
   this->T = this->T_corr * this->T_prior;
 
   // Update next global pose
@@ -1583,7 +1624,7 @@ void dlio::LocNode::debug() {
                                        pow(this->state.p[2]-this->origin[2],2)), 4) + " meters"
     << "|" << std::endl;
   std::cout << "| " << std::left << std::setfill(' ') << std::setw(66)
-    << "Registration       :: global map points: " + std::to_string(this->globalmap ? this->globalmap->points.size() : 0)
+    << "Registration       :: " + this->reg_method_ + " / global map points: " + std::to_string(this->globalmap ? this->globalmap->points.size() : 0)
     << "|" << std::endl;
   std::cout << "|                                                                   |" << std::endl;
 
@@ -1599,7 +1640,7 @@ void dlio::LocNode::debug() {
     << std::setw(6) << *std::max_element(this->comp_times.begin(), this->comp_times.end())*1000.
     << "     |" << std::endl;
   if (!this->gicp_times.empty()) {
-  std::cout << "| GICP Align Time  :: "
+  std::cout << "| Scan Match Time  :: "
     << std::setfill(' ') << std::setw(6) << this->gicp_times.back()*1000. << " ms    // Avg: "
     << std::setw(6) << avg_gicp_time*1000. << " / Max: "
     << std::setw(6) << *std::max_element(this->gicp_times.begin(), this->gicp_times.end())*1000.

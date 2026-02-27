@@ -1,28 +1,26 @@
-This is forked version of direct_lidar_inertial_odometry
+# Direct LiDAR-Inertial Odometry (Forked)
+
+This is a forked version of [DLIO (Direct LiDAR-Inertial Odometry)](https://github.com/vectr-ucla/direct_lidar_inertial_odometry), with an added localization mode supporting GICP-based and NDT_OMP-based scan matching.
+
+## Usage
+
+### LIO (Odometry + Mapping)
+
+```bash
+roslaunch direct_lidar_inertial_odometry dlio.launch
+```
 
 ### Localization
-localization against a pre-built PCD map. First, save a map using the odometry mode.(refer to original repo) then run:
 
-```sh
+```bash
 roslaunch direct_lidar_inertial_odometry dlio_loc.launch
 ```
 
-Configure the global map path and initial pose in `cfg/loc_params.yaml`:
+The scan matching method can be selected in `cfg/loc_params.yaml`:
 
 ```yaml
 dlio:
   loc:
-    globalmap:
-      pcd_path: "/path/to/map.pcd"
-      leaf_size: 0.5        # map downsample resolution (0 = no downsample)
-
-    initial_pose:
-      use_rviz: false       # true: set initial pose via RViz "2D Pose Estimate"
-      use_yaml: true        # true: use yaml values below
-      x: 0.0
-      y: 0.0
-      z: 0.0
-      roll: 0.0             # radians
-      pitch: 0.0            # radians
-      yaw: 0.0              # radians (e.g. 3.14159 for 180 degrees)
+    registration:
+      method: "GICP"      # "GICP" or "NDT_OMP"
 ```

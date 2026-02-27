@@ -10,7 +10,7 @@
  *                                                         *
  ***********************************************************/
 
-#include "dlio/odom.h"
+#include "odom.h"
 
 int main(int argc, char** argv) {
 

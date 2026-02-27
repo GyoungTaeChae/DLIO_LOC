@@ -10,21 +10,38 @@
  *                                                         *
  ***********************************************************/
 
-#include "dlio/loc.h"
+#include "dlio.h"
 
-int main(int argc, char** argv) {
+class dlio::MapNode {
 
-  mallopt(M_ARENA_MAX, 1);
+public:
 
-  ros::init(argc, argv, "dlio_loc_node");
-  ros::NodeHandle nh("~");
+  MapNode(ros::NodeHandle node_handle);
+  ~MapNode();
 
-  dlio::LocNode node(nh);
-  ros::AsyncSpinner spinner(0);
-  spinner.start();
-  node.start();
-  ros::waitForShutdown();
+  void start();
 
-  return 0;
+private:
 
-}
+  void getParams();
+
+  void callbackKeyframe(const sensor_msgs::PointCloud2ConstPtr& keyframe);
+
+  bool savePcd(direct_lidar_inertial_odometry::save_pcd::Request& req,
+               direct_lidar_inertial_odometry::save_pcd::Response& res);
+
+  ros::NodeHandle nh;
+
+  ros::Subscriber keyframe_sub;
+  ros::Publisher map_pub;
+
+  ros::ServiceServer save_pcd_srv;
+
+  pcl::PointCloud<PointType>::Ptr dlio_map;
+  pcl::VoxelGrid<PointType> voxelgrid;
+
+  std::string odom_frame;
+
+  double leaf_size_;
+
+};
