@@ -1,0 +1,56 @@
+dlio:
+  frames:
+    map: map
+    baselink: base_link
+    lidar: lidar
+    imu: imu
+
+  loc:
+    globalmap:
+      pcd_path: "/dataset/dlio_map.pcd"
+      leaf_size: 0.1
+
+    initial_pose:
+      use_rviz: true      # true: RViz "2D Pose Estimate"로 초기위치 설정
+      use_yaml: true       # true: 아래 yaml 값으로 초기위치 설정
+      x: 5.0
+      y: 5.0
+      z: 5.0
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0 # 180 --> pi
+
+    gravity: 9.80665
+    computeTimeOffset: true
+
+    imu:
+      approximateGravity: true
+      calibration:
+        gyro: true
+        accel: true
+        time: 3
+      bufferSize: 5000
+
+    preprocessing:
+      cropBoxFilter:
+        size: 1.0
+      voxelFilter:
+        res: 0.25
+
+    gicp:
+      minNumPoints: 64
+      kCorrespondences: 16
+      maxCorrespondenceDistance: 1.0
+      maxIterations: 32
+      transformationEpsilon: 0.01
+      rotationEpsilon: 0.01
+      initLambdaFactor: 1e-9
+
+    geo:
+      Kp: 4.5
+      Kv: 11.25
+      Kq: 4.0
+      Kab: 2.25
+      Kgb: 1.0
+      abias_max: 5.0
+      gbias_max: 0.5

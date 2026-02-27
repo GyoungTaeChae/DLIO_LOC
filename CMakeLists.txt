@@ -112,8 +112,14 @@ add_dependencies(dlio_map_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_genera
 target_compile_options(dlio_map_node PRIVATE ${OpenMP_FLAGS})
 target_link_libraries(dlio_map_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads)
 
+# Localization Node
+add_executable(dlio_loc_node src/dlio/loc_node.cc src/dlio/loc.cc)
+add_dependencies(dlio_loc_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
+target_compile_options(dlio_loc_node PRIVATE ${OpenMP_FLAGS})
+target_link_libraries(dlio_loc_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads nano_gicp)
+
 # Binaries
-install( TARGETS dlio_odom_node dlio_map_node
+install( TARGETS dlio_odom_node dlio_map_node dlio_loc_node
          DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION} )
 install( DIRECTORY cfg launch
          DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION} )

@@ -1,0 +1,271 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Frames1
+        - /Point Clouds1
+        - /Point Clouds1/Deskewed Scan1
+        - /Point Clouds1/Global Map1
+        - /Odometry1
+      Splitter Ratio: 0.6470588445663452
+    Tree Height: 393
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Tool Properties
+    Expanded:
+      - /2D Pose Estimate1
+      - /2D Nav Goal1
+      - /Publish Point1
+    Name: Tool Properties
+    Splitter Ratio: 0.5886790156364441
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+      - /Current View1/Focal Point1
+    Name: Views
+    Splitter Ratio: 0.5157480239868164
+  - Class: rviz/Time
+    Name: Time
+    SyncMode: 0
+    SyncSource: Global Map
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/TF
+          Enabled: false
+          Filter (blacklist): ""
+          Filter (whitelist): ""
+          Frame Timeout: 9999
+          Frames:
+            All Enabled: true
+          Marker Alpha: 1
+          Marker Scale: 5
+          Name: tf tree
+          Show Arrows: true
+          Show Axes: true
+          Show Names: true
+          Tree:
+            {}
+          Update Interval: 0
+          Value: false
+        - Alpha: 1
+          Class: rviz/Axes
+          Enabled: true
+          Length: 1
+          Name: map
+          Radius: 0.25
+          Reference Frame: robot/map
+          Show Trail: false
+          Value: true
+        - Alpha: 1
+          Class: rviz/Axes
+          Enabled: true
+          Length: 1
+          Name: base_link
+          Radius: 0.25
+          Reference Frame: robot/base_link
+          Show Trail: false
+          Value: true
+      Enabled: true
+      Name: Frames
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: false
+          Autocompute Value Bounds:
+            Max Value: 10.856446266174316
+            Min Value: -1.1997138261795044
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 1024
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Deskewed Scan
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 2
+          Size (m): 0.009999999776482582
+          Style: Points
+          Topic: /robot/dlio/loc_node/pointcloud/deskewed
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: false
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: 0
+            Value: false
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: Intensity
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 1024
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Global Map
+          Position Transformer: XYZ
+          Queue Size: 1000
+          Selectable: true
+          Size (Pixels): 2
+          Size (m): 0.05000000074505806
+          Style: Points
+          Topic: /robot/dlio/loc_node/globalmap
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+      Enabled: true
+      Name: Point Clouds
+    - Class: rviz/Group
+      Displays:
+        - Angle Tolerance: 0.009999999776482582
+          Class: rviz/Odometry
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: false
+          Enabled: false
+          Keep: 1
+          Name: Pose
+          Position Tolerance: 0.009999999776482582
+          Queue Size: 1000
+          Shape:
+            Alpha: 1
+            Axes Length: 1
+            Axes Radius: 0.25
+            Color: 255; 25; 0
+            Head Length: 0.30000001192092896
+            Head Radius: 0.10000000149011612
+            Shaft Length: 1
+            Shaft Radius: 0.05000000074505806
+            Value: Axes
+          Topic: /robot/dlio/loc_node/odom
+          Unreliable: false
+          Value: false
+        - Alpha: 1
+          Buffer Length: 1
+          Class: rviz/Path
+          Color: 255; 209; 0
+          Enabled: true
+          Head Diameter: 0.30000001192092896
+          Head Length: 0.20000000298023224
+          Length: 0.30000001192092896
+          Line Style: Billboards
+          Line Width: 0.10000000149011612
+          Name: Trajectory
+          Offset:
+            X: 0
+            Y: 0
+            Z: 0
+          Pose Color: 255; 85; 255
+          Pose Style: None
+          Queue Size: 10
+          Radius: 0.029999999329447746
+          Shaft Diameter: 0.10000000149011612
+          Shaft Length: 0.10000000149011612
+          Topic: /robot/dlio/loc_node/path
+          Unreliable: false
+          Value: true
+      Enabled: true
+      Name: Odometry
+  Enabled: true
+  Global Options:
+    Background Color: 0; 0; 0
+    Default Light: true
+    Fixed Frame: robot/map
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+    - Class: rviz/SetInitialPose
+      Theta std deviation: 0.2617993950843811
+      Topic: /initialpose
+      X std deviation: 0.5
+      Y std deviation: 0.5
+    - Class: rviz/SetGoal
+      Topic: /move_base_simple/goal
+    - Class: rviz/PublishPoint
+      Single click: true
+      Topic: /clicked_point
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 65.00438690185547
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 1
+      Focal Point:
+        X: -1.1110018491744995
+        Y: 4.421533584594727
+        Z: -3.744713068008423
+      Focal Shape Fixed Size: false
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 1.040000081062317
+      Target Frame: robot/base_link
+      Yaw: 2.6049962043762207
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: true
+  Height: 1371
+  Hide Left Dock: true
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd00000001000000000000035c00000505fc0200000005fb000000100044006900730070006c006100790073000000003b000001c4000000c700fffffffb0000001200530065006c0065006300740069006f006e0000000205000000dd0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000002e8000000de0000005c00fffffffb0000000a0056006900650077007300000003cc00000122000000a000fffffffb0000000800540069006d006500000004f40000004c0000003700ffffff000004df0000050500000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: true
+  Time:
+    collapsed: true
+  Tool Properties:
+    collapsed: true
+  Views:
+    collapsed: true
+  Width: 1247
+  X: 66
+  Y: 32

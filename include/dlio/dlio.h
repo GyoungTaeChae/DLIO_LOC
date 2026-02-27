@@ -49,6 +49,7 @@ std::string to_string_with_precision(const T a_value, const int n = 6)
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseArray.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <nav_msgs/Path.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -83,6 +84,7 @@ namespace dlio {
 
   class OdomNode;
   class MapNode;
+  class LocNode;
 
   struct Point {
     Point(): data{0.f, 0.f, 0.f, 1.f} {}
